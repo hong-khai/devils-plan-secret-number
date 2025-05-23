@@ -46,7 +46,8 @@ for i in range(1, no_of_players + 1):
 	assigned_numbers.add(secret_number)
 	player_info[player_name] = {
 		"secret_number": secret_number,
-		"points": 0
+		"points": 0,
+		"piece_change": 0
 	}
 
 timer_thread = threading.Thread(target=countdown_timer, args=(120,))
@@ -112,7 +113,7 @@ for player_name in player_info:
 				if guess != "":
 					player_info[player_guessing]["points"] -= 1
 		else:
-			guess = input(f"What is {player_guessing}'s guess for their number?")
+			guess = input(f"What is {player_guessing}'s guess for their number? ")
 			if guess == player_info[player_name]["secret_number"]:
 				player_info[player_name]["points"] += 5
 			else:
@@ -121,6 +122,43 @@ for player_name in player_info:
 	if player_info[player_guessing]["points"] == no_of_players + 4:
 		player_info[player_guessing]["points"] += 5
 
+points = {info["points"] for info in player_info.values()}
+all_same = len(points) == 1
+
+if all_same:
+    print("All players must return 1 piece each, as they all have the same number of points.")
+
 ranked_players = sorted(player_info.items(), key=lambda x: x[1]["points"], reverse=True)
+min_points = min(info["points"] for info in player_info.values())
+lowest_players = [name for name, info in player_info.items() if info["points"] == min_points]
+
+if len(lowest_players) > 1:
+	print("Players:")
+	for player_name in player_info:
+		print(player_name)
+
+	player_picked_last = input(f"Who did {ranked_players[0][0]} pick to require them to return 3 pieces? ")
+	while player_picked_last not in player_info:
+		print("Please pick a valid player.")
+		player_picked_last = input(f"Who did {ranked_players[0][0]} pick to require them to return 3 pieces? ")
+
 for player_name, info in ranked_players:
-	print(f"{player_name}: {info['points']} points")
+	if info["points"] >= 16:
+		info["piece_change"] += 3
+	elif info["points"] >= 11:
+		info["piece_change"] += 2
+	elif info["points"] >= 6:
+		info["piece_change"] += 1
+	elif player_name == lowest_players:
+		info["piece_change"] -= 3
+	elif info["points"] < 0:
+		info["piece_change"] -= 2
+	else:
+		info["piece_change"] -= 1
+
+	if info["piece_change"] < 0:
+		print(f"{player_name}: {info['points']} points (Return {abs(info["piece_change"])} pieces)")
+	if info["piece_change"] == 0:
+		print(f"{player_name}: {info['points']} points (No pieces given)")
+	if info["piece_change"] > 0:
+		print(f"{player_name}: {info['points']} points (Receive {info["piece_change"]})")
