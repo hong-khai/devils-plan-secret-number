@@ -2,6 +2,7 @@ import sys
 import random
 import time
 import threading
+import queue
 
 time_up = False
 
@@ -23,6 +24,26 @@ def countdown_timer(minutes):
 	global time_up
 	time.sleep(minutes * 60)
 	time_up = True
+
+def get_input(prompt, timeout=1):
+    q = queue.Queue()
+
+    def input_thread():
+        try:
+            q.put(input(prompt))
+        except EOFError:
+            q.put("")
+    
+    t = threading.Thread(target=input_thread)
+    t.daemon = True
+    t.start()
+
+    while not time_up:
+        try:
+            return q.get(timeout=timeout)
+        except queue.Empty:
+            continue
+    return ""
 
 print("Welcome to Secret Number")
 
@@ -58,14 +79,20 @@ while not time_up:
 	print("Players:")
 	for player_name in player_info:
 		print(player_name)
-	player_1 = input("Enter in the name of the first player.: ")
+	player_1 = get_input("Enter in the name of the first player: ")
+	if time_up:
+		break
 	if player_1 not in player_info:
 		print("Please pick a valid player.")
 		continue
-	player_2 = input("Enter in the name of the second player.: ")
+
+	player_2 = get_input("Enter in the name of the second player: ")
+	if time_up:
+		break
 	if player_2 not in player_info:
 		print("Please pick a valid player.")
 		continue
+
 	if player_1 == player_2:
 		print("Please pick two different players.")
 		continue
@@ -74,7 +101,9 @@ while not time_up:
 (b) Multiplication
 (c) Division
 (d) Zero""")
-	card_option = input()
+	card_option = get_input("> ")
+	if time_up:
+		break
 	if card_option == "a":
 		result = player_info[player_1]["secret_number"] + player_info[player_2]["secret_number"]
 		if result > 180:
@@ -137,10 +166,10 @@ if len(lowest_players) > 1:
 	for player_name in player_info:
 		print(player_name)
 
-	player_picked_last = input(f"Who did {ranked_players[0][0]} pick to require them to return 3 pieces? ")
+	player_picked_last = input(f"Who did {ranked_players[0][0]} pick to require returning 3 pieces? ")
 	while player_picked_last not in player_info:
 		print("Please pick a valid player.")
-		player_picked_last = input(f"Who did {ranked_players[0][0]} pick to require them to return 3 pieces? ")
+		player_picked_last = input(f"Who did {ranked_players[0][0]} pick to require returning 3 pieces? ")
 
 for player_name, info in ranked_players:
 	if info["points"] >= 16:
@@ -157,8 +186,8 @@ for player_name, info in ranked_players:
 		info["piece_change"] -= 1
 
 	if info["piece_change"] < 0:
-		print(f"{player_name}: {info['points']} points (Return {abs(info["piece_change"])} pieces)")
+		print(f"{player_name}: {info['points']} points (Return {abs(info['piece_change'])} pieces)")
 	if info["piece_change"] == 0:
 		print(f"{player_name}: {info['points']} points (No pieces given)")
 	if info["piece_change"] > 0:
-		print(f"{player_name}: {info['points']} points (Receive {info["piece_change"]})")
+		print(f"{player_name}: {info['points']} points (Receive {info['piece_change']})")
